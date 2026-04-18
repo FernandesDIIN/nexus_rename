@@ -39,34 +39,3 @@ cd NexusRename
 
 # Instale as dependências visuais e de processamento
 pip install customtkinter Pillow
-
-3. Executando a Aplicação
-Bash
-python main.py
-Distribuição (Gerando o Executável .exe)
-Para criar um executável autônomo e distribuível para usuários finais sem a necessidade de instalar o Python:
-
-Instale as ferramentas de compilação:
-
-Bash
-pip install pyinstaller
-Gere o binário do aplicativo:
-```
-Bash
-pyinstaller --noconsole --onefile --icon=icon.ico --add-data "icon.ico;." --collect-all customtkinter --name "NexusRename" main.py
-(Opcional) Instalação Profissional: Utilize o arquivo nexus_build.iss incluído no repositório com o Inno Setup Compiler para gerar o instalador do Windows.
-```
-
-Sobre o Autor
-[T.D.J Fernandes / VENSEV]
-Engenharia de Software e Soluções em Automação.
-
-GitHub: @FernandesDIIN
-
-Contato: 
-
-Website/Portfólio: 
-
-Licença
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.# nexus_rename
-# nexus_rename
