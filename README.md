@@ -51,10 +51,11 @@ Instale as ferramentas de compilação:
 Bash
 pip install pyinstaller
 Gere o binário do aplicativo:
-
+```
 Bash
 pyinstaller --noconsole --onefile --icon=icon.ico --add-data "icon.ico;." --collect-all customtkinter --name "NexusRename" main.py
 (Opcional) Instalação Profissional: Utilize o arquivo nexus_build.iss incluído no repositório com o Inno Setup Compiler para gerar o instalador do Windows.
+```
 
 Sobre o Autor
 [T.D.J Fernandes / VENSEV]
