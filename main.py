@@ -6,14 +6,10 @@ from ui.app import NexusApp
 def resource_path(relative_path):
     """ 
     Obtém o caminho absoluto para os recursos (como o ícone).
-    Funciona tanto no ambiente de desenvolvimento quanto no .exe compilado.
+    Otimizado para a compilação nativa do Nuitka.
     """
-    try:
-        # PyInstaller cria uma pasta temporária e armazena o caminho em _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-
+    # No Nuitka, __file__ aponta corretamente para a pasta de extração em tempo de execução
+    base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
 if __name__ == "__main__":

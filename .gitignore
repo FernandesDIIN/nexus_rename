@@ -2,3 +2,9 @@
 venv/
 .venv/
 env/
+Output/
+logs/
+main.build/
+main.dist/
+main.onefile-build/
+NexusRename.exe

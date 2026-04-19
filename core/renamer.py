@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import json
 
 def execute_rename(aligned_mapping: list[tuple[str, str | None]]) -> dict:
     """
@@ -47,4 +48,38 @@ def execute_rename(aligned_mapping: list[tuple[str, str | None]]) -> dict:
         except Exception as e:
             results["errors"].append(f"Erro ao renomear {current_path.name}: {str(e)}")
 
+    return results
+
+def execute_rollback(log_file_path: str) -> dict:
+    """
+    Lê o arquivo de log JSON e reverte os nomes dos arquivos para o estado original.
+    """
+    results = {
+        "success": 0,
+        "errors": []
+    }
+
+    try:
+        with open(log_file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        history = data.get("history", {})
+        # O JSON salva como {"novo_caminho": "caminho_original"}
+        
+        for current_path_str, original_path_str in history.items():
+            current_path = Path(current_path_str)
+            original_path = Path(original_path_str)
+            
+            if current_path.exists():
+                try:
+                    os.rename(current_path, original_path)
+                    results["success"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Falha ao reverter {current_path.name}: {str(e)}")
+            else:
+                results["errors"].append(f"Arquivo alterado não encontrado: {current_path.name}")
+                
+    except Exception as e:
+        results["errors"].append(f"Erro ao ler o arquivo de log: {str(e)}")
+        
     return results

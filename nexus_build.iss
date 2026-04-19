@@ -45,7 +45,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 ; O ALVO CRÍTICO: Pega o .exe gerado pelo PyInstaller na pasta dist
-Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 ; Nota: Não use "Flags: ignoreversion" em arquivos de sistema compartilhados, mas para o nosso .exe é seguro e recomendado.
 
 [Icons]
