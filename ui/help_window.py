@@ -20,18 +20,17 @@ class HelpWindow(ctk.CTkToplevel):
 
         # Cabeçalho
         self._add_heading(scroll_frame, "📚 Como usar o NexusRename", 22)
-        self._add_paragraph(scroll_frame, "O NexusRename é uma ferramenta de elite para gestão e sincronização de nomes de arquivos em lote. Abaixo, entenda como cada módulo funciona.")
+        self._add_paragraph(scroll_frame, "O NexusRename sincroniza nomes de imagens e executa renomeações em lote com pré-visualização e histórico para desfazer.")
 
         # Seção 1: Sincronizador Seguro
         self._add_heading(scroll_frame, "🔄 Sincronizador (1:1)", 18)
         sync_text = (
             "Uso ideal: Quando você exporta imagens de um editor, perde os nomes originais, e "
             "precisa devolver os nomes exatos para as imagens editadas.\n\n"
-            "• Regra de Ouro: A ordem de leitura é alfabética na Origem e por Data de Criação no Destino.\n"
-            "• Prevenção de Erros: Se houver quantidade diferente de imagens entre as pastas, o sistema "
-            "abrirá a 'Janela de Alinhamento'.\n"
-            "• Na Janela de Alinhamento: Você pode arrastar as imagens para casar com os nomes corretos, "
-            "ou usar o botão '+ Vazio' para pular imagens que não foram editadas."
+            "• Ordem: nomes naturais na origem e data de modificação no destino.\n"
+            "• Alinhamento: marque duas imagens editadas e clique em 'Trocar selecionadas'. A troca é instantânea.\n"
+            "• Atalhos: Ctrl+Z desfaz uma troca, Ctrl+Enter confirma e Esc fecha.\n"
+            "• Miniaturas são carregadas em segundo plano; você pode começar a alinhar imediatamente."
         )
         self._add_paragraph(scroll_frame, sync_text)
 
@@ -44,7 +43,11 @@ class HelpWindow(ctk.CTkToplevel):
             "• ## : Numeração com zero à esquerda (01, 02... 10)\n"
             "• ### : Numeração em centenas (001, 002... 100)\n"
             "• [NOME] : Mantém o nome original da imagem.\n"
-            "• [DATA] : Insere a data de hoje (Ex: 20260418)."
+            "• [DATA] : Insere a data de hoje.\n"
+            "• [PASTA] : Insere o nome da pasta da imagem.\n"
+            "• [EXT] : Insere a extensão sem ponto.\n"
+            "• [MODIFICADO] : Insere a data de modificação.\n"
+            "• Início e incremento controlam a sequência; 'Incluir subpastas' faz uma busca recursiva."
         )
         self._add_paragraph(scroll_frame, batch_text)
         
@@ -57,7 +60,7 @@ class HelpWindow(ctk.CTkToplevel):
         # Rodapé / Créditos Open Source
         self._add_heading(scroll_frame, "⚙️ Sobre o Projeto", 16)
         credits_text = (
-            "Versão: 1.0.0\n"
+            "Versão: 1.6.0\n"
             "Desenvolvido para a comunidade Open Source.\n"
             "Se encontrou um bug ou tem sugestões, visite o repositório no GitHub."
         )

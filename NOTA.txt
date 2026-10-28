@@ -1,0 +1,1 @@
+Diredirecione o projeto para desktop (feito em python, css e outras linguagens), mantendo o protótipo Android apenas como referência sempre.

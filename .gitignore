@@ -8,3 +8,17 @@ main.build/
 main.dist/
 main.onefile-build/
 NexusRename.exe
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# Arquivos gerados e locais
+__pycache__/
+*.pyc
+venv/
+main.build/
+main.dist/
+Output/
+logs/
+.agents/

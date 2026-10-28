@@ -1,85 +1,140 @@
-import os
-from pathlib import Path
 import json
+import os
+import uuid
+from pathlib import Path
 
-def execute_rename(aligned_mapping: list[tuple[str, str | None]]) -> dict:
-    """
-    Executa a renomeação física dos arquivos no sistema operacional.
-    Aceita 'None' no caminho de destino para arquivos que foram pulados pelo usuário.
-    
-    Formato esperado: [(caminho_destino_atual, novo_caminho_destino), ...]
-    Se o destino foi pulado na UI, o caminho_destino_atual será None.
-    """
-    results = {
-        "success": 0,
-        "skipped": 0,
-        "errors": []
-    }
 
-    for current_dest, new_dest in aligned_mapping:
-        # Se a UI enviou None, significa que o usuário marcou para pular esta imagem
-        if current_dest is None:
+def _path_key(path: Path) -> str:
+    """Return a comparison key that also behaves correctly on Windows."""
+    return os.path.normcase(os.path.abspath(path))
+
+
+def _same_spelling(first: Path, second: Path) -> bool:
+    """Distinguish a no-op from a case-only rename on case-insensitive systems."""
+    return os.path.abspath(first) == os.path.abspath(second)
+
+
+def _available_path(requested: Path, reserved: set[str]) -> Path:
+    candidate = requested
+    counter = 1
+    while candidate.exists() or _path_key(candidate) in reserved:
+        candidate = requested.with_name(f"{requested.stem}_{counter}{requested.suffix}")
+        counter += 1
+    return candidate
+
+
+def execute_rename(aligned_mapping: list[tuple[str | None, str | None]]) -> tuple[dict, list[tuple[str, str]]]:
+    """Rename files safely, including swaps and other rename cycles.
+
+    Every source is first moved to a unique temporary name. Only after that succeeds
+    are the final names applied. This prevents a file renamed earlier in the batch
+    from occupying a name needed by a later file.
+    """
+    results = {"success": 0, "skipped": 0, "errors": []}
+    prepared: list[tuple[Path, Path]] = []
+    source_keys: set[str] = set()
+    requested_keys: set[str] = set()
+
+    for source_value, target_value in aligned_mapping:
+        if not source_value or not target_value:
             results["skipped"] += 1
             continue
+        source = Path(source_value)
+        target = Path(target_value)
+        source_key = _path_key(source)
+        target_key = _path_key(target)
+        if source_key in source_keys:
+            results["errors"].append(f"Arquivo repetido na operação: {source.name}")
+            continue
+        if target_key in requested_keys:
+            results["errors"].append(f"Nome de destino duplicado: {target.name}")
+            continue
+        if not source.is_file():
+            results["errors"].append(f"Arquivo não encontrado: {source.name}")
+            continue
+        source_keys.add(source_key)
+        requested_keys.add(target_key)
+        prepared.append((source, target))
 
-        try:
-            current_path = Path(current_dest)
-            new_path = Path(new_dest)
+    if results["errors"]:
+        return results, []
 
-            # Validação: Verifica se o arquivo de destino ainda existe antes de renomear
-            if not current_path.exists():
-                results["errors"].append(f"Arquivo não encontrado: {current_path.name}")
+    # Existing files that are themselves part of this batch will be vacated in phase 1.
+    reserved = set(requested_keys)
+    final_pairs: list[tuple[Path, Path]] = []
+    for source, requested in prepared:
+        if _same_spelling(source, requested):
+            final_pairs.append((source, source))
+            continue
+        if requested.exists() and _path_key(requested) not in source_keys:
+            target = _available_path(requested, reserved)
+            reserved.add(_path_key(target))
+        else:
+            target = requested
+        final_pairs.append((source, target))
+
+    staged: list[tuple[Path, Path, Path]] = []
+    try:
+        for source, target in final_pairs:
+            if _same_spelling(source, target):
                 continue
+            temporary = source.with_name(f".nexusrename-{uuid.uuid4().hex}.tmp")
+            os.replace(source, temporary)
+            staged.append((source, temporary, target))
+    except OSError as exc:
+        for source, temporary, _ in reversed(staged):
+            try:
+                os.replace(temporary, source)
+            except OSError:
+                pass
+        results["errors"].append(f"Não foi possível preparar a renomeação: {exc}")
+        return results, []
 
-            # Prevenção de Colisão: Se já existir um arquivo com o novo nome
-            if new_path.exists():
-                # Adiciona um sufixo numérico para evitar sobrescrever a imagem
-                base_name = new_path.stem
-                extension = new_path.suffix
-                counter = 1
-                while new_path.exists():
-                    new_path = new_path.with_name(f"{base_name}_{counter}{extension}")
-                    counter += 1
+    completed: list[tuple[Path, Path]] = []
+    try:
+        staged_by_source = {_path_key(source): (source, temporary, target) for source, temporary, target in staged}
+        for source, target in final_pairs:
+            if _same_spelling(source, target):
+                completed.append((source, target))
+                continue
+            _, temporary, target = staged_by_source[_path_key(source)]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(temporary, target)
+            completed.append((source, target))
+    except OSError as exc:
+        # Best-effort restoration of both completed and still staged entries.
+        for source, target in reversed(completed):
+            if not _same_spelling(source, target) and target.exists():
+                try:
+                    os.replace(target, source)
+                except OSError:
+                    pass
+        for source, temporary, _ in reversed(staged):
+            if temporary.exists():
+                try:
+                    os.replace(temporary, source)
+                except OSError:
+                    pass
+        results["errors"].append(f"A operação foi revertida após uma falha: {exc}")
+        return results, []
 
-            # Executa a renomeação no sistema operacional
-            os.rename(current_path, new_path)
-            results["success"] += 1
+    real_pairs = [(str(source), str(target)) for source, target in completed]
+    results["success"] = len(real_pairs)
+    return results, real_pairs
 
-        except Exception as e:
-            results["errors"].append(f"Erro ao renomear {current_path.name}: {str(e)}")
-
-    return results
 
 def execute_rollback(log_file_path: str) -> dict:
-    """
-    Lê o arquivo de log JSON e reverte os nomes dos arquivos para o estado original.
-    """
-    results = {
-        "success": 0,
-        "errors": []
-    }
-
+    """Reverse a logged operation using the same cycle-safe rename engine."""
+    results = {"success": 0, "skipped": 0, "errors": []}
     try:
-        with open(log_file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            
-        history = data.get("history", {})
-        # O JSON salva como {"novo_caminho": "caminho_original"}
-        
-        for current_path_str, original_path_str in history.items():
-            current_path = Path(current_path_str)
-            original_path = Path(original_path_str)
-            
-            if current_path.exists():
-                try:
-                    os.rename(current_path, original_path)
-                    results["success"] += 1
-                except Exception as e:
-                    results["errors"].append(f"Falha ao reverter {current_path.name}: {str(e)}")
-            else:
-                results["errors"].append(f"Arquivo alterado não encontrado: {current_path.name}")
-                
-    except Exception as e:
-        results["errors"].append(f"Erro ao ler o arquivo de log: {str(e)}")
-        
+        with open(log_file_path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        history = data.get("history")
+        if not isinstance(history, dict) or not history:
+            raise ValueError("o log não contém um histórico válido")
+        mapping = [(current, original) for current, original in reversed(list(history.items()))]
+        rename_results, _ = execute_rename(mapping)
+        results.update(rename_results)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        results["errors"].append(f"Erro ao ler o arquivo de log: {exc}")
     return results

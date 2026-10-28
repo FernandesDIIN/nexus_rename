@@ -1,23 +1,28 @@
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
-def create_rollback_log(successful_renames: list[tuple[str, str]], log_folder: str = "logs"):
+def create_rollback_log(successful_renames: list[tuple[str, str]], log_folder: str = None) -> str | None:
     """
     Gera um arquivo JSON estruturado após cada operação.
-    Isso é vital para a Fase 3 (se decidirmos adicionar um botão de 'Desfazer' no futuro).
+    O log é salvo em %APPDATA%/NexusRename/logs (acesso garantido).
     """
     if not successful_renames:
         return None
 
-    # Cria a pasta de logs na raiz do projeto se não existir
-    log_dir = Path(log_folder)
-    log_dir.mkdir(exist_ok=True)
+    # Caminho seguro: sempre na pasta de dados do usuário
+    if log_folder is None:
+        app_data = os.getenv("APPDATA")
+        base_dir = (Path(app_data) / "NexusRename" if app_data else Path.home() / ".nexusrename") / "logs"
+    else:
+        base_dir = Path(log_folder)
+
+    base_dir.mkdir(parents=True, exist_ok=True)
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = log_dir / f"nexus_log_{timestamp}.json"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    log_file = base_dir / f"nexus_log_{timestamp}.json"
     
-    # Formato ideal para reversão: "Caminho Atual (Novo)" : "Caminho Antigo (Original)"
     rollback_data = {
         "operation_date": timestamp,
         "total_files": len(successful_renames),

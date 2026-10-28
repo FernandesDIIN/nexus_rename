@@ -17,4 +17,6 @@ class Notification(ctk.CTkFrame):
 
 def show_toast(master, message, type="info"):
     colors = {"info": "#1f538d", "success": "#28a745", "error": "#8b0000"}
-    Notification(master, message, color=colors.get(type, "#1f538d"))
+    notif = Notification(master, message, color=colors.get(type, "#1f538d"))
+    notif.lift()
+    return notif
